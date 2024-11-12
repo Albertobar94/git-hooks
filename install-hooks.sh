@@ -169,8 +169,8 @@ update_gitignore() {
         touch .gitignore
     fi
     
-    if ! grep -q "^.hooks$" .gitignore; then
-        echo ".hooks" >> .gitignore
+    if ! grep -q "^# Git hooks$" .gitignore; then
+        echo -e "\n# Git hooks\n.hooks" >> .gitignore
         print_success "✅ Updated .gitignore to exclude .hooks directory"
     fi
 }
@@ -199,6 +199,11 @@ main() {
             "global")
                 print_status "📂 Installing in git hooks directory..."
                 git_hooks_path=$(git rev-parse --git-path hooks)
+                if [ ! -w "$git_hooks_path" ]; then
+                    print_status "⚠️  Insufficient permissions for global hooks directory"
+                    print_status "Try running with sudo: sudo bash install-hooks.sh global"
+                    exit 1
+                fi
                 create_post_checkout_content "$git_hooks_path"
                 chmod +x "$git_hooks_path/post-checkout"
                 ;;
