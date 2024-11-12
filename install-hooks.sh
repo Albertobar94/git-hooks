@@ -178,7 +178,7 @@ update_gitignore() {
 # Main installation function
 main() {
     # Accept installation method as command line argument
-    local installation_method=${1:-"auto"}  # Default to "auto" if no argument provided
+    local installation_method=${1:-"local"}  # Default to "local" if no argument provided
 
     # Check if husky is installed
     if [ -d "node_modules/husky" ]; then
@@ -188,7 +188,7 @@ main() {
         chmod +x .husky/post-checkout
     else
         case $installation_method in
-            "auto"|"local")
+            "local")
                 print_status "📂 Creating local hooks directory..."
                 mkdir -p .hooks
                 create_post_checkout_content ".hooks"
@@ -203,8 +203,8 @@ main() {
                 chmod +x "$git_hooks_path/post-checkout"
                 ;;
             *)
-                echo "Usage: $0 [auto|local|global]"
-                echo "  auto/local: Install in local .hooks directory (default)"
+                echo "Usage: $0 [local|global]"
+                echo "  local: Install in local .hooks directory (default)"
                 echo "  global: Install in git hooks directory"
                 exit 1
                 ;;
