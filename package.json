@@ -4,8 +4,8 @@
   "scripts": {
     "hooks:verify": "bash scripts/other-scripts.sh verify",
     "hooks:reset": "bash scripts/other-scripts.sh reset",
-    "setup": "bash scripts/install-hooks.sh",
-    "postinstall": "bash scripts/install-hooks.sh"
+    "setup": "bash install-hooks.sh",
+    "postinstall": "bash install-hooks.sh"
   },
   "husky": {
     "skipCI": true

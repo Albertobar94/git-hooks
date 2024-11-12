@@ -6,7 +6,7 @@ Automatic package manager detection and dependency installation using git hooks.
 
 ### Option 1: Quick Installation (using curl)
 ```bash
-curl -sSL https://raw.githubusercontent.com/albertobar94/git-hooks/main/scripts/install-hooks.sh | bash
+curl -sSL https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash
 ```
 
 ### Option 2: Manual Installation
