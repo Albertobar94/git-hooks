@@ -1,0 +1,32 @@
+{
+  "name": "git-hooks",
+  "version": "1.0.0",
+  "scripts": {
+    "hooks:verify": "bash scripts/other-scripts.sh verify",
+    "hooks:reset": "bash scripts/other-scripts.sh reset",
+    "setup": "bash scripts/install-hooks.sh",
+    "postinstall": "bash scripts/install-hooks.sh"
+  },
+  "husky": {
+    "skipCI": true
+  },
+  "description": "Git hooks for automatic package manager detection and dependency installation",
+  "license": "MIT",
+  "keywords": [
+    "git-hooks",
+    "automation",
+    "package-manager",
+    "npm",
+    "yarn",
+    "pnpm"
+  ],
+  "author": "Alberto Barboza",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/albertobar94/git-hooks.git"
+  },
+  "bugs": {
+    "url": "https://github.com/albertobar94/git-hooks/issues"
+  },
+  "homepage": "https://github.com/albertobar94/git-hooks#readme"
+}
