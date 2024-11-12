@@ -130,39 +130,6 @@ EOF
 chmod +x scripts/other-scripts.sh
 }
 
-# Function to update package.json scripts
-update_package_json() {
-    if [ -f "package.json" ]; then
-        # Check if jq is installed
-        if ! command -v jq &> /dev/null; then
-            print_status "⚠️  jq is not installed. Manual package.json update required."
-            echo "Add these scripts to your package.json:"
-            echo '"scripts": {'
-            echo '  "postinstall": "bash scripts/install-hooks.sh",'
-            echo '  "setup": "bash scripts/install-hooks.sh",'
-            echo '  "hooks:verify": "bash scripts/other-scripts.sh verify",'
-            echo '  "hooks:reset": "bash scripts/other-scripts.sh reset"'
-            echo '}'
-            return
-        fi
-
-        # Backup original package.json
-        cp package.json package.json.backup
-
-        # Update package.json with new scripts
-        jq '.scripts += {
-            "postinstall": "bash scripts/install-hooks.sh",
-            "setup": "bash scripts/install-hooks.sh",
-            "hooks:verify": "bash scripts/other-scripts.sh verify",
-            "hooks:reset": "bash scripts/other-scripts.sh reset"
-        }' package.json.backup > package.json
-
-        print_success "✅ Updated package.json scripts"
-    else
-        print_status "⚠️  No package.json found. Skipping script updates."
-    fi
-}
-
 # Function to update .gitignore
 update_gitignore() {
     if [ ! -f ".gitignore" ]; then
@@ -216,15 +183,7 @@ main() {
         esac
     fi
 
-    print_status "📝 Updating package.json..."
-    update_package_json
-
     print_success "✅ Git hooks installed successfully!"
-    print_status "
-    Available commands:
-    - npm run hooks:verify  : Verify hooks installation
-    - npm run hooks:reset   : Reset and reinstall hooks
-    "
 }
 
 # Run the installation with first command line argument
