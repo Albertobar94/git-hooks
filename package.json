@@ -7,8 +7,8 @@
     "setup": "bash install-hooks.sh",
     "postinstall": "bash install-hooks.sh"
   },
-  "husky": {
-    "skipCI": true
+  "devDependencies": {
+    "husky": "^8.0.0"
   },
   "description": "Git hooks for automatic package manager detection and dependency installation",
   "license": "MIT",

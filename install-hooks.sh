@@ -17,7 +17,10 @@ print_success() {
 
 # Function to create post-checkout hook content
 create_post_checkout_content() {
-cat > .hooks/post-checkout << 'EOF'
+    # Determine target directory based on arguments
+    local target_dir="$1"
+    
+cat > "$target_dir/post-checkout" << 'EOF'
 #!/bin/bash
 
 # Get the previous and current commit hashes from git hook parameters
@@ -160,20 +163,54 @@ update_package_json() {
     fi
 }
 
+# Function to update .gitignore
+update_gitignore() {
+    if [ ! -f ".gitignore" ]; then
+        touch .gitignore
+    fi
+    
+    if ! grep -q "^.hooks$" .gitignore; then
+        echo ".hooks" >> .gitignore
+        print_success "✅ Updated .gitignore to exclude .hooks directory"
+    fi
+}
+
 # Main installation function
 main() {
-    print_status "📂 Creating hooks directory..."
-    mkdir -p .hooks
+    # Check if husky is installed
+    if [ -d "node_modules/husky" ]; then
+        print_status "🐶 Husky detected, installing in husky hooks..."
+        mkdir -p ".husky"
+        create_post_checkout_content ".husky"
+        chmod +x .husky/post-checkout
+    else
+        # Ask user for installation preference
+        echo "Select installation method:"
+        echo "1) Local .hooks directory (recommended)"
+        echo "2) Global git hooks directory"
+        read -p "Enter choice (1/2): " choice
 
-    print_status "📥 Creating post-checkout hook..."
-    create_post_checkout_content
-    chmod +x .hooks/post-checkout
-
-    print_status "📥 Creating utility scripts..."
-    create_utility_script
-
-    print_status "⚙️  Configuring git to use hooks..."
-    git config core.hooksPath .hooks
+        case $choice in
+            1)
+                print_status "📂 Creating local hooks directory..."
+                mkdir -p .hooks
+                create_post_checkout_content ".hooks"
+                chmod +x .hooks/post-checkout
+                git config core.hooksPath .hooks
+                update_gitignore
+                ;;
+            2)
+                print_status "📂 Installing in git hooks directory..."
+                git_hooks_path=$(git rev-parse --git-path hooks)
+                create_post_checkout_content "$git_hooks_path"
+                chmod +x "$git_hooks_path/post-checkout"
+                ;;
+            *)
+                echo "Invalid choice. Exiting."
+                exit 1
+                ;;
+        esac
+    fi
 
     print_status "📝 Updating package.json..."
     update_package_json
