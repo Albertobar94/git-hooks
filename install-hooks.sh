@@ -177,6 +177,9 @@ update_gitignore() {
 
 # Main installation function
 main() {
+    # Accept installation method as command line argument
+    local installation_method=${1:-"auto"}  # Default to "auto" if no argument provided
+
     # Check if husky is installed
     if [ -d "node_modules/husky" ]; then
         print_status "🐶 Husky detected, installing in husky hooks..."
@@ -184,14 +187,8 @@ main() {
         create_post_checkout_content ".husky"
         chmod +x .husky/post-checkout
     else
-        # Ask user for installation preference
-        echo "Select installation method:"
-        echo "1) Local .hooks directory (recommended)"
-        echo "2) Global git hooks directory"
-        read -p "Enter choice (1/2): " choice
-
-        case $choice in
-            1)
+        case $installation_method in
+            "auto"|"local")
                 print_status "📂 Creating local hooks directory..."
                 mkdir -p .hooks
                 create_post_checkout_content ".hooks"
@@ -199,14 +196,16 @@ main() {
                 git config core.hooksPath .hooks
                 update_gitignore
                 ;;
-            2)
+            "global")
                 print_status "📂 Installing in git hooks directory..."
                 git_hooks_path=$(git rev-parse --git-path hooks)
                 create_post_checkout_content "$git_hooks_path"
                 chmod +x "$git_hooks_path/post-checkout"
                 ;;
             *)
-                echo "Invalid choice. Exiting."
+                echo "Usage: $0 [auto|local|global]"
+                echo "  auto/local: Install in local .hooks directory (default)"
+                echo "  global: Install in git hooks directory"
                 exit 1
                 ;;
         esac
@@ -223,5 +222,5 @@ main() {
     "
 }
 
-# Run the installation
-main
+# Run the installation with first command line argument
+main "$1"

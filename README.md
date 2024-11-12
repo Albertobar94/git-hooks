@@ -2,32 +2,61 @@
 
 Automatic package manager detection and dependency installation using git hooks. This tool automatically detects your package manager (npm, yarn, or pnpm) and installs dependencies when switching branches if package.json has changed.
 
-## Quick Start
+## Installation Options
 
-### Option 1: Quick Installation (using curl)
+### 1. Quick Installation (using curl)
 ```bash
+# Default local installation
 curl -sSL https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash
+
+# Or specify installation method
+curl -sSL https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash -s -- global
 ```
 
-### Option 2: Manual Installation
+### 2. With Husky
+```bash
+# Install husky as dev dependency
+npm install --save-dev husky
+
+# Install hooks
+npm run setup
+```
+
+### 3. Manual Installation
 ```bash
 # Clone the repository
 git clone https://github.com/albertobar94/git-hooks.git
 
-# Install dependencies (this will also install the hooks)
-npm install
-# or
-yarn install
-# or
-pnpm install
+# Install with specific method
+./install-hooks.sh local  # or global
 ```
+
+## Installation Methods
+
+This tool supports multiple installation approaches:
+
+1. **Local Installation** (Recommended)
+   - Creates a `.hooks` directory in your project
+   - Automatically added to .gitignore
+   - Keeps hooks specific to each project
+
+2. **Global Installation**
+   - Installs in git's global hooks directory
+   - Affects all repositories on your machine
+   - Useful for maintaining consistent hooks across projects
+
+3. **Husky Integration**
+   - Automatically detected if husky is installed
+   - Uses husky's hook management
+   - Ideal for projects already using husky
 
 ## Features
 
 - 🔍 Automatically detects package manager (npm, yarn, or pnpm)
 - 📦 Installs dependencies when switching branches if package.json changed
+- 🛠️ Multiple installation methods (local, global, or husky)
 - ⚡ Quick installation with curl
-- 🛠️ Works with any Node.js project
+- 🔒 Safe and secure execution
 
 ## How It Works
 
@@ -39,14 +68,14 @@ When you switch branches, the hook:
 ## Available Scripts
 
 ```bash
-# Manually install hooks
-npm run setup
-
 # Verify hooks installation
 npm run hooks:verify
 
 # Reset and reinstall hooks
 npm run hooks:reset
+
+# Manual installation/setup
+npm run setup
 ```
 
 ## Hook Behavior
@@ -75,18 +104,18 @@ npm run hooks:verify
 npm run hooks:reset
 ```
 
-3. Manual installation:
+3. Check installation method:
 ```bash
-bash scripts/install-hooks.sh
+git config core.hooksPath  # Should show .hooks for local installation
 ```
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## Security
 
 The hook only runs package manager commands and does not execute any arbitrary code. It's safe to use in any Node.js project.
+
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## License
 
