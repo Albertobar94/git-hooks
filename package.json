@@ -2,7 +2,8 @@
   "name": "git-hooks",
   "version": "1.0.0",
   "scripts": {
-    "setup": "bash install-hooks.sh"
+    "install-hooks": "bash install-hooks.sh",
+    "uninstall-hooks": "bash uninstall-hooks.sh"
   },
   "description": "Git hooks for automatic package manager detection and dependency installation",
   "license": "MIT",

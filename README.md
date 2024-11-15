@@ -9,16 +9,7 @@ Automatic package manager detection and dependency installation using git hooks.
 curl -sSL https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash
 ```
 
-### 2. With Husky
-```bash
-# Install husky as dev dependency
-npm install --save-dev husky
-
-# Install hooks
-npm run setup
-```
-
-### 3. Manual Installation
+### 2. Manual Installation
 ```bash
 # Clone the repository
 git clone https://github.com/albertobar94/git-hooks.git
@@ -56,19 +47,6 @@ When you switch branches, the hook:
 2. Identifies your package manager by looking for lock files
 3. Automatically runs the appropriate install command
 
-## Available Scripts
-
-```bash
-# Verify hooks installation
-npm run hooks:verify
-
-# Reset and reinstall hooks
-npm run hooks:reset
-
-# Manual installation/setup
-npm run setup
-```
-
 ## Hook Behavior
 
 The hook triggers when:
@@ -83,24 +61,50 @@ It won't run when:
 
 ## Troubleshooting
 
-If the hooks aren't working:
-
-1. Verify installation:
+1. Check installation method:
 ```bash
-npm run hooks:verify
+git config core.hooksPath  # Should show .git/hooks for local installation
 ```
 
-2. Reset hooks:
+2. Verify hook permissions:
 ```bash
-npm run hooks:reset
+ls -l .git/hooks/post-checkout  # Should show executable permissions (chmod +x)
+chmod +x .git/hooks/post-checkout  # Fix permissions if needed
 ```
 
-3. Check installation method:
+3. Debug hook execution:
 ```bash
-git config core.hooksPath  # Should show .hooks for local installation
+# Enable debug mode for more verbose output
+export GIT_HOOKS_DEBUG=1
+git checkout <branch-name>
 ```
 
-4. Force reinstall latest version:
+4. Check hook script existence:
+```bash
+# Verify the hook file exists
+ls -la .git/hooks/post-checkout
+
+# View hook contents
+cat .git/hooks/post-checkout
+```
+
+5. Common Issues:
+
+- **Hook not executing:**
+  - Ensure the hook file has executable permissions
+  - Verify the hook path is correct
+  - Check if Husky is conflicting (if installed)
+
+- **Package manager not detected:**
+  - Verify lock file exists (package-lock.json, yarn.lock, or pnpm-lock.yaml)
+  - Ensure package manager is installed globally
+
+- **Installation fails:**
+  - Check write permissions in .git directory
+  - Ensure curl/wget has internet access
+  - Try manual installation method
+
+6. Force reinstall latest version:
 ```bash
 curl -H 'Cache-Control: no-cache' -o- https://raw.githubusercontent.com/albertobar94/git-hooks/main/uninstall-hooks.sh | bash && curl -H 'Cache-Control: no-cache' -o- https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash
 ```
