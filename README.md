@@ -6,11 +6,7 @@ Automatic package manager detection and dependency installation using git hooks.
 
 ### 1. Quick Installation (using curl)
 ```bash
-# Default local installation
 curl -sSL https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash
-
-# Or specify installation method
-curl -sSL https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash -s -- global
 ```
 
 ### 2. With Husky
@@ -27,25 +23,20 @@ npm run setup
 # Clone the repository
 git clone https://github.com/albertobar94/git-hooks.git
 
-# Install with specific method
-./install-hooks.sh local  # or global
+# Install hooks
+./install-hooks.sh
 ```
 
 ## Installation Methods
 
-This tool supports multiple installation approaches:
+This tool supports two installation approaches:
 
-1. **Local Installation** (Recommended)
-   - Creates a `.hooks` directory in your project
-   - Automatically added to .gitignore
-   - Keeps hooks specific to each project
+1. **Standard Installation**
+   - Installs in git's hooks directory
+   - Affects the current repository
+   - Automatically detects and integrates with husky if present
 
-2. **Global Installation**
-   - Installs in git's global hooks directory
-   - Affects all repositories on your machine
-   - Useful for maintaining consistent hooks across projects
-
-3. **Husky Integration**
+2. **Husky Integration**
    - Automatically detected if husky is installed
    - Uses husky's hook management
    - Ideal for projects already using husky
@@ -109,6 +100,11 @@ npm run hooks:reset
 git config core.hooksPath  # Should show .hooks for local installation
 ```
 
+4. Force reinstall latest version:
+```bash
+curl -H 'Cache-Control: no-cache' -o- https://raw.githubusercontent.com/albertobar94/git-hooks/main/uninstall-hooks.sh | bash && curl -H 'Cache-Control: no-cache' -o- https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash
+```
+
 ## Security
 
 The hook only runs package manager commands and does not execute any arbitrary code. It's safe to use in any Node.js project.
@@ -120,3 +116,20 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Uninstallation
+
+To remove the hooks:
+
+```bash
+# Using curl
+curl -sSL https://raw.githubusercontent.com/albertobar94/git-hooks/main/uninstall-hooks.sh | bash
+
+# Or if you have the repository cloned
+./uninstall-hooks.sh
+```
+
+The uninstaller will:
+- Remove git hooks from the repository
+- Clean up any related configurations
+- Remove hooks directory if it exists
