@@ -15,18 +15,10 @@ print_success() {
     echo -e "${GREEN}$1${NC}"
 }
 
-# Function to create post-checkout hook content
-create_post_checkout_content() {
-    # Determine target directory based on arguments
-    local target_dir="$1"
-    
-cat > "$target_dir/post-checkout" << 'EOF'
+# Function to create shared hook content
+create_shared_hook_content() {
+    cat << 'EOF'
 #!/bin/bash
-
-# Get the previous and current commit hashes from git hook parameters
-previous_head=$1
-new_head=$2
-checkout_type=$3
 
 # Function to detect package manager based on lock files
 detect_package_manager() {
@@ -41,8 +33,13 @@ detect_package_manager() {
     fi
 }
 
-# Only run on branch checkout, not file checkout
-if [ $checkout_type -eq 1 ]; then
+# Function to check and install dependencies
+check_and_install_dependencies() {
+    local previous_head=$1
+    local new_head=$2
+    
+    echo "🔍 Checking for package.json changes between $previous_head and $new_head..."
+    
     # Check if package.json has changed between commits
     if git diff --name-only $previous_head $new_head | grep -q "^package.json$"; then
         echo "📦 package.json changes detected"
@@ -50,18 +47,21 @@ if [ $checkout_type -eq 1 ]; then
         # Detect package manager
         package_manager=$(detect_package_manager)
         
+        echo "🗑️  Removing node_modules..."
+        rm -rf node_modules
+        
         case $package_manager in
             "pnpm")
                 echo "🔍 pnpm detected, installing dependencies..."
-                pnpm install
+                pnpm install --frozen-lockfile > /dev/null 2>&1 || pnpm install
                 ;;
             "yarn")
                 echo "🔍 yarn detected, installing dependencies..."
-                yarn install
+                yarn install --frozen-lockfile > /dev/null 2>&1 || yarn install
                 ;;
             "npm")
                 echo "🔍 npm detected, installing dependencies..."
-                npm install
+                npm ci > /dev/null 2>&1 || npm install
                 ;;
             *)
                 echo "⚠️  No package manager detected. Please run install manually if needed."
@@ -72,119 +72,166 @@ if [ $checkout_type -eq 1 ]; then
     else
         echo "ℹ️  No changes in package.json, skipping dependency installation"
     fi
+}
+EOF
+}
+
+# Function to create post-checkout hook content
+create_post_checkout_content() {
+    local target_dir="$1"
+    
+    # First, write the shared content
+    create_shared_hook_content > "$target_dir/post-checkout"
+    
+    # Then append post-checkout specific content
+    cat >> "$target_dir/post-checkout" << 'EOF'
+
+# Get the previous and current commit hashes from git hook parameters
+previous_head="$1"
+new_head="$2"
+checkout_type="$3"
+
+# Only run on branch checkout, not file checkout
+if [ "$checkout_type" = "1" ] && [ -n "$previous_head" ] && [ -n "$new_head" ]; then
+    echo "🔄 Branch checkout detected, checking dependencies..."
+    check_and_install_dependencies "$previous_head" "$new_head"
 fi
 EOF
 }
 
-# Function to create utility script content
-create_utility_script() {
-mkdir -p scripts
-cat > scripts/other-scripts.sh << 'EOF'
-#!/bin/bash
+# Function to create post-merge hook content
+create_post_merge_content() {
+    local target_dir="$1"
+    
+    # First, write the shared content
+    create_shared_hook_content > "$target_dir/post-merge"
+    
+    # Then append post-merge specific content
+    cat >> "$target_dir/post-merge" << 'EOF'
 
-# Colors for output
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# In post-merge, ORIG_HEAD contains the pre-merge state
+echo "🔄 Merge detected, checking dependencies..."
+check_and_install_dependencies "ORIG_HEAD" "HEAD"
+EOF
+}
 
-# Function to verify hooks installation
-verify_hooks() {
-    if [ -f ".hooks/post-checkout" ]; then
-        echo -e "${GREEN}✓ post-checkout hook is installed${NC}"
-        if [ -x ".hooks/post-checkout" ]; then
-            echo -e "${GREEN}✓ post-checkout hook is executable${NC}"
+# Function to verify hook installation
+verify_hook_installation() {
+    local hook_path="$1"
+    local hook_name="$2"
+    
+    if [ -f "$hook_path/$hook_name" ]; then
+        if [ -x "$hook_path/$hook_name" ]; then
+            print_success "✅ $hook_name hook is installed and executable"
+            return 0
         else
-            echo -e "${RED}✗ post-checkout hook is not executable${NC}"
-            echo "Run: chmod +x .hooks/post-checkout"
+            print_status "⚠️  $hook_name hook is installed but not executable"
+            return 1
         fi
     else
-        echo -e "${RED}✗ post-checkout hook is not installed${NC}"
-        echo "Run: npm run setup"
+        print_status "⚠️  $hook_name hook is not installed"
+        return 1
     fi
 }
 
-# Function to clean and reinstall hooks
-reset_hooks() {
-    echo -e "${BLUE}Cleaning hooks...${NC}"
-    rm -rf .hooks
-    bash scripts/install-hooks.sh
+# Function to get git hooks path
+get_git_hooks_path() {
+    if [ -n "$SUDO_USER" ]; then
+        # If running with sudo, get the path as the regular user
+        local git_dir=$(su - "$SUDO_USER" -c "cd \"$PWD\" && git rev-parse --git-dir")
+        echo "$PWD/$git_dir/hooks"
+    else
+        local git_dir=$(git rev-parse --git-dir)
+        echo "$PWD/$git_dir/hooks"
+    fi
 }
 
-# Parse command line arguments
-case "$1" in
-    "verify")
-        verify_hooks
-        ;;
-    "reset")
-        reset_hooks
-        ;;
-    *)
-        echo "Usage: $0 {verify|reset}"
-        echo "  verify: Check if hooks are properly installed"
-        echo "  reset: Remove and reinstall hooks"
-        exit 1
-        ;;
-esac
-EOF
-chmod +x scripts/other-scripts.sh
-}
+# Function to check if husky is properly installed and setup
+check_husky_setup() {
+    # Check if husky is in package.json dependencies or devDependencies
+    if ! grep -q '"husky"' package.json 2>/dev/null; then
+        return 1
+    fi
 
-# Function to update .gitignore
-update_gitignore() {
-    if [ ! -f ".gitignore" ]; then
-        touch .gitignore
+    # Check if husky is installed in node_modules
+    if [ ! -d "node_modules/husky" ]; then
+        return 1
     fi
-    
-    if ! grep -q "^# Git hooks$" .gitignore; then
-        echo -e "\n# Git hooks\n.hooks" >> .gitignore
-        print_success "✅ Updated .gitignore to exclude .hooks directory"
+
+    # Check if husky is initialized (.husky directory exists and contains .gitignore)
+    if [ ! -d ".husky" ] || [ ! -f ".husky/.gitignore" ]; then
+        return 1
     fi
+
+    # Check if husky is tracked by git
+    if ! git ls-files --error-unmatch .husky/.gitignore >/dev/null 2>&1; then
+        return 1
+    fi
+
+    return 0
 }
 
 # Main installation function
 main() {
-    # Accept installation method as command line argument
-    local installation_method=${1:-"local"}  # Default to "local" if no argument provided
+    print_status "📂 Installing in git hooks directory..."
+    git_hooks_path=$(get_git_hooks_path)
+    print_status "Installing hooks in: $git_hooks_path"
+    local installation_success=true
 
-    # Check if husky is installed
-    if [ -d "node_modules/husky" ]; then
-        print_status "🐶 Husky detected, installing in husky hooks..."
-        mkdir -p ".husky"
+    if check_husky_setup; then
+        print_status "🐶 Husky detected and properly configured, installing in husky hooks..."
         create_post_checkout_content ".husky"
+        create_post_merge_content ".husky"
         chmod +x .husky/post-checkout
+        chmod +x .husky/post-merge
+        
+        # Verify husky hooks
+        verify_hook_installation ".husky" "post-checkout" || installation_success=false
+        verify_hook_installation ".husky" "post-merge" || installation_success=false
     else
-        case $installation_method in
-            "local")
-                print_status "📂 Creating local hooks directory..."
-                mkdir -p .hooks
-                create_post_checkout_content ".hooks"
-                chmod +x .hooks/post-checkout
-                git config core.hooksPath .hooks
-                update_gitignore
-                ;;
-            "global")
-                print_status "📂 Installing in git hooks directory..."
-                git_hooks_path=$(git rev-parse --git-path hooks)
-                if [ ! -w "$git_hooks_path" ]; then
-                    print_status "⚠️  Insufficient permissions for global hooks directory"
-                    print_status "Try running with sudo: sudo bash install-hooks.sh global"
-                    exit 1
-                fi
-                create_post_checkout_content "$git_hooks_path"
-                chmod +x "$git_hooks_path/post-checkout"
-                ;;
-            *)
-                echo "Usage: $0 [local|global]"
-                echo "  local: Install in local .hooks directory (default)"
-                echo "  global: Install in git hooks directory"
-                exit 1
-                ;;
-        esac
+        if [ ! -d "$git_hooks_path" ]; then
+            print_status "Creating hooks directory..."
+            mkdir -p "$git_hooks_path"
+        fi
+        
+        if [ ! -w "$git_hooks_path" ] && [ -z "$SUDO_USER" ]; then
+            print_status "⚠️  Insufficient permissions for git hooks directory"
+            print_status "Try one of these options:"
+            print_status "1. Run with sudo: sudo bash install-hooks.sh"
+            print_status "2. Try direct installation: curl -H 'Cache-Control: no-cache' -o- https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash"
+            exit 1
+        fi
+        
+        print_status "Creating post-checkout hook..."
+        create_post_checkout_content "$git_hooks_path"
+        
+        print_status "Creating post-merge hook..."
+        create_post_merge_content "$git_hooks_path"
+        
+        print_status "Setting permissions..."
+        chmod +x "$git_hooks_path/post-checkout"
+        chmod +x "$git_hooks_path/post-merge"
+        
+        # If running with sudo, fix ownership
+        if [ -n "$SUDO_USER" ]; then
+            print_status "Fixing ownership..."
+            chown "$SUDO_USER:$(id -gn $SUDO_USER)" "$git_hooks_path/post-checkout"
+            chown "$SUDO_USER:$(id -gn $SUDO_USER)" "$git_hooks_path/post-merge"
+        fi
+        
+        # Verify hooks
+        verify_hook_installation "$git_hooks_path" "post-checkout" || installation_success=false
+        verify_hook_installation "$git_hooks_path" "post-merge" || installation_success=false
     fi
 
-    print_success "✅ Git hooks installed successfully!"
+    if [ "$installation_success" = true ]; then
+        print_success "✅ Git hooks installed successfully!"
+    else
+        print_status "⚠️  Some issues were detected during installation"
+        print_status "💡 Try direct installation: curl -H 'Cache-Control: no-cache' -o- https://raw.githubusercontent.com/albertobar94/git-hooks/main/install-hooks.sh | bash"
+        exit 1
+    fi
 }
 
-# Run the installation with first command line argument
-main "$1"
+# Call main function with all arguments
+main "$@"

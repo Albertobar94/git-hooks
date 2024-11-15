@@ -2,13 +2,7 @@
   "name": "git-hooks",
   "version": "1.0.0",
   "scripts": {
-    "hooks:verify": "bash scripts/other-scripts.sh verify",
-    "hooks:reset": "bash scripts/other-scripts.sh reset",
-    "setup": "bash install-hooks.sh",
-    "postinstall": "bash install-hooks.sh"
-  },
-  "devDependencies": {
-    "husky": "^8.0.0"
+    "setup": "bash install-hooks.sh"
   },
   "description": "Git hooks for automatic package manager detection and dependency installation",
   "license": "MIT",
