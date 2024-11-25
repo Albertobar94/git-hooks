@@ -39,13 +39,20 @@ This tool supports two installation approaches:
 - 🛠️ Multiple installation methods (local, global, or husky)
 - ⚡ Quick installation with curl
 - 🔒 Safe and secure execution
+- 🔄 Visual progress spinner with health monitoring
+- ⏱️ Automatic timeout after 60 seconds
+- 🛡️ Process health checks (zombie detection, CPU monitoring)
 
 ## How It Works
 
 When you switch branches, the hook:
 1. Detects if package.json has changed
 2. Identifies your package manager by looking for lock files
-3. Automatically runs the appropriate install command
+3. Automatically runs the appropriate install command with progress indicator
+4. Monitors installation health and terminates if:
+   - Process becomes unresponsive (0% CPU for 5+ seconds)
+   - Installation exceeds 60-second timeout
+   - Process enters zombie state
 
 ## Hook Behavior
 

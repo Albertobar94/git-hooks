@@ -20,6 +20,57 @@ create_shared_hook_content() {
     cat << 'EOF'
 #!/bin/bash
 
+# Spinner function for visual feedback with timeout and health checks
+spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='|/-\'
+    local timeout=60  # 60 seconds timeout
+    local start_time=$(date +%s)
+    
+    while true; do
+        # Check if process exists
+        if ! ps -p $pid > /dev/null; then
+            printf "    \b\b\b\b"
+            return 0
+        fi
+        
+        # Check if process is zombie
+        if ps -p $pid -o state= | grep -q "Z"; then
+            echo "⚠️  Process became zombie, terminating..."
+            kill -9 $pid 2>/dev/null
+            return 1
+        fi
+        
+        # Check CPU usage (get the CPU percentage, remove % sign and compare)
+        local cpu_usage=$(ps -p $pid -o %cpu= | tr -d ' ')
+        if [ "${cpu_usage%.*}" = "0" ]; then
+            local zero_cpu_time=$(($(date +%s) - start_time))
+            if [ $zero_cpu_time -gt 5 ]; then  # If CPU is 0% for more than 5 seconds
+                echo "⚠️  Process appears frozen (0% CPU), terminating..."
+                kill -9 $pid 2>/dev/null
+                return 1
+            fi
+        fi
+        
+        # Check timeout
+        local current_time=$(date +%s)
+        local elapsed_time=$((current_time - start_time))
+        if [ $elapsed_time -gt $timeout ]; then
+            echo "⚠️  Process timed out after ${timeout} seconds, terminating..."
+            kill -9 $pid 2>/dev/null
+            return 1
+        fi
+        
+        # Update spinner animation
+        local temp=${spinstr#?}
+        printf " [%c]  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        printf "\b\b\b\b\b\b"
+        sleep $delay
+    done
+}
+
 # Function to detect package manager based on lock files
 detect_package_manager() {
     if [ -f "pnpm-lock.yaml" ]; then
@@ -53,15 +104,18 @@ check_and_install_dependencies() {
         case $package_manager in
             "pnpm")
                 echo "🔍 pnpm detected, installing dependencies..."
-                pnpm install --frozen-lockfile > /dev/null 2>&1 || pnpm install
+                (pnpm install --frozen-lockfile > /dev/null 2>&1 || pnpm install) &
+                spinner $! || { echo "❌ Installation failed"; exit 1; }
                 ;;
             "yarn")
                 echo "🔍 yarn detected, installing dependencies..."
-                yarn install --frozen-lockfile > /dev/null 2>&1 || yarn install
+                (yarn install --frozen-lockfile > /dev/null 2>&1 || yarn install) &
+                spinner $! || { echo "❌ Installation failed"; exit 1; }
                 ;;
             "npm")
                 echo "🔍 npm detected, installing dependencies..."
-                npm ci > /dev/null 2>&1 || npm install
+                (npm ci > /dev/null 2>&1 || npm install) &
+                spinner $! || { echo "❌ Installation failed"; exit 1; }
                 ;;
             *)
                 echo "⚠️  No package manager detected. Please run install manually if needed."
