@@ -99,7 +99,8 @@ check_and_install_dependencies() {
         package_manager=$(detect_package_manager)
         
         echo "🗑️  Removing node_modules..."
-        rm -rf node_modules
+        (rm -rf node_modules) &
+        spinner $! || { echo "❌ node_modules removal failed"; exit 1; }
         
         case $package_manager in
             "pnpm")
